@@ -1,0 +1,143 @@
+method: fedavg
+dataset:
+  # [mnist, cifar10, cifar100, emnist, fmnist, femnist, medmnist,
+  # medmnistA, medmnistC, covid19, celeba, synthetic, svhn,
+  # tiny_imagenet, cinic10, domain]
+  name: cifar10
+
+model:
+  name: PResNet18  # ConvNet resnet18 PConvNet PResNet18 vgg16
+  use_torchvision_pretrained_weights: false
+  external_model_weights_path: null
+lr_scheduler:
+  name: null # [null, step, cosine, constant, plateau]
+  step_size: 2 # step
+  gamma: 0.1 # [step, plateau]
+  T_max: 10 # cosine
+  eta_min: 0 # cosine
+  factor: 0.3334 # [constant, plateau]
+  total_iters: 5 # constant
+  mode: min # plataeu
+  patience: 10 # plateau
+  threshold: 1.0e-4 # plateauzhenbc
+  threshold_mode: rel # plateau
+  cooldown: 0 # plateau
+  min_lr: 0 # plateau
+  eps: 1.0e-8 # plateau
+  last_epoch: -1
+# The optimizer that used for client local training.
+optimizer:
+  name: sgd # [sgd, adam, adamw, rmsprop, adagrad]
+  lr: 0.1
+  dampening: 0 # for SGD
+  weight_decay: 0
+  momentum: 0 # for [SGD, RMSprop]
+  alpha: 0.99 # for RMSprop
+  nesterov: false # for SGD
+  betas: [0.9, 0.999] # for [Adam, AdamW]
+  amsgrad: false # for [Adam, AdamW]
+
+mode: serial # [serial, parallel]
+parallel:
+  ray_cluster_addr: null # [null, auto, local]
+  num_cpus: null
+  num_gpus: null
+  num_workers: 2
+
+common:
+  seed: 42 # Random seed of the run.
+  join_ratio: 0.1 # Ratio for (client each round) / (client num in total).
+  global_epoch: 1000 # Number of global epochs, also called communication round.
+  local_epoch: 2 # Number if epochs of client local training.
+  batch_size: 64 # Data batch size for client local training.
+  reset_optimizer_on_global_epoch: true # Whether to reset optimizer on each global epoch.
+
+  # The ratio of stragglers (set in [0, 1]).
+  # Stragglers would not perform full-epoch local training as normal clients.
+  # Their local epoch would be randomly selected from range [straggler_min_local_epoch, local_epoch).
+  straggler_ratio: 0
+  straggler_min_local_epoch: 0
+  # How to deal with parameter buffers (in model.buffers()) of each client model.
+  # global (default): buffers will be aggregated like other model parameters.
+  # local: clients' buffers are isolated.
+  # drop: clients will drop their buffers after training done.
+  buffers: global # [local, global, drop]
+  # Whether to evaluate client local models (that before and after local training) on client side.
+  # You can deactivating this for acclerating training.
+  # NOTE: deactivate this feature will affect features like logging and monitoring.
+  client_side_evaluation: true
+  # The evaluation settings for client side and server side.
+  test:
+    # For example, Set client.test as true to evaluate on local testsets from selected clients with client local models.
+    # Frequency is set by `client.interval`. Negative value for disabling.
+    client:
+      interval: 500
+      finetune_epoch: 0 # Number of epochs for clients fine-tunning their models before testing.
+      train: false
+      val: false
+      test: true
+    # For example, set server.test as true to evaluate on a centralized testset (created by aggregating all clients' local testsets)
+    # with the updated global model at the end of a communication round.
+    # Frequency is set by `server.interval`. Negative value for disabling.
+    # NOTE: If clients have personalized model parameters like local buffers or classifiers, centralized evaluation for the global model is disabled.
+    server:
+      interval: -1
+      train: false
+      val: false
+      test: false
+      # Whether to evaluate the global model in train mode or eval mode.
+      # Evaluating in train mode allows to get better batchnorm statistics, but is dependent on the order of the data.
+      model_in_train_mode: false
+
+  verbose_gap: 10 # Interval round of displaying clients training performance on terminal.
+  monitor: null # [null, visdom, tensorboard]
+  use_cuda: true # Whether to use cuda for training.
+
+  save_log: true # Whether to save log files in out/<method>/<start_time>.
+  save_model: false # Whether to save model weights (*.pt) in out/<method>/<start_time>.
+  save_learning_curve_plot: true # Whether to save learning curve figure (*.png) in out/<method>/<start_time>.
+  save_metrics: true # Whether to save metrics (*.csv) in out/<method>/<start_time>.
+
+  # Whether to delete output files after user press `Ctrl + C`,
+  # which indicates that the run is removable.
+  # mal [81, 23, 66, 4, 98, 11, 75, 50, 31, 88, 42, 19, 60, 2, 91, 55, 37, 70, 8, 29, 84, 49, 15, 63, 95, 21, 78, 3, 40, 59]  [1,2,10,14,15,23,31,45,52,36,98,75,37,46,55,69,71,97,84,28]
+  delete_useless_run: true
+  backdoor:
+      select_client: 3
+      poison_client_ids: [1,15]    #[1,15,23,37,46,55,69,75,97,84]  [1,15]
+      poison_client_ratio: 0.1 # the ratio of poisoned clients
+      trigger_size: 10 # mnist，fashionmnist = 8，cifar10，cifar100 = 10
+      trigger_location: 2
+      poison_epoch: 500
+      poison_method: bapfl  #'badnet','dba','fcba','bapfl','pfedba','badpfl','BC_LPA','BC_LFA'
+      target_label: 0 #  backdoor strigger label
+      alpha_loss: 1  #FCBA参数
+      BapFL_PGD: 0 #是否使用投影梯度
+      sigma: 0.01  #mnist 0.2 cifar 0.0001
+      pFedBA_first_attack: 1
+      pFedBA_learning_rate: 0.1
+      defence_method: None #‘AT' 'PFedPA', 'PFed-CLASP','WM','AT','Simple-Tuning',
+      aggerate: None # 'flame' 'krum','PFL_ALB','FLIGHT',
+      sars_ratio: 300 #mnist为150，cifar10为300
+      sars_epoch: 2 #mnist为4，cifar10为2
+      # PFed-CLASP参数
+      flag_spa: 1
+      n_aug: 7
+      u_conv: 1.5  # 裁剪阈值
+      pruning_rate: 0.1  # 裁剪阈值
+      bias: 0.3
+      wm_label: 7 # 水印标签
+      AT_alpha: 0.1 # AT参数
+      AT_beta: 0.01 # AT参数
+
+# You can set specific arguments for advanced FL methods also.
+# FL-bench uses FL method arguments by args.<method>.<arg>.
+# You need to follow the key set in `get_hyperparams()` in class <method>Server, src/server/<method>.py
+# FL-bench will ignore these arguments if they are not supported by the selected method,
+# e.g., if you are running FedProx, then pFedSim arguments will be ignored.
+fedprox:
+  mu: 0.1
+ditto:
+  lamda: 0.1
+pfedsim:
+  warmup_round: 0.5

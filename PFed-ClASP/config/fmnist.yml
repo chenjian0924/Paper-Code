@@ -1,0 +1,59 @@
+# Full explaination are listed on README.md
+
+mode: serial # [serial, parallel]
+common:
+  # [mnist, cifar10, cifar100, emnist, fmnist, femnist, medmnist, medmnistA, medmnistC, covid19, celeba, synthetic, svhn, tiny_imagenet, cinic10, domain]
+  dataset: mnist
+  seed: 42
+  model: FashionmnistNet
+  join_ratio: 0.1
+  global_epoch: 300
+  local_epoch: 5
+  finetune_epoch: 0
+  batch_size: 64
+  test_interval: 10 #测试间隔
+  straggler_ratio: 0
+  straggler_min_local_epoch: 0
+  external_model_params_file: null
+  buffers: local # [local, global, drop]
+  optimizer:
+    name: sgd # [sgd, adam, adamw, rmsprop, adagrad]
+    lr: 0.1
+    dampening: 0 # for SGD
+    weight_decay: 0.0001
+    momentum: 0 # for [SGD, RMSprop]
+    alpha: 0.99 # for RMSprop
+    nesterov: false # for SGD
+    betas: [0.9, 0.999] # for [Adam, AdamW]
+    amsgrad: false # for [Adam, AdamW]
+
+  lr_scheduler:
+    name: null # [null, step, cosine, constant, plateau]
+    step_size: 10 # an arg example for setting step lr_scheduler
+
+  eval_test: true
+  eval_val: false
+  eval_train: false
+
+  verbose_gap: 5 #每隔多少轮输出一次精度
+  visible: null # [null, visdom, tensorboard]
+  use_cuda: true
+  save_log: true
+  save_model: false
+  save_fig: true
+  save_metrics: true
+
+  # 0代表False，1代表True
+  # 中毒客户端序号
+  poison_client_ids: [1,15]
+  CLP: 0  # 服务端是否执行CLP剪枝
+  u: 2
+  Badnet: 0
+  BapFL: 1
+  BapFL_PGD: 0
+  noise_distribution_gaussian: 1
+  sigma: 0.1
+  SPA: 0
+  n_aug: 7
+  judge_noise: 0.1
+  poison_epoch: 0
